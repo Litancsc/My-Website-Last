@@ -6,21 +6,37 @@ import { formatDate } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import NotificationModal from './NotificationModal';
 
+interface Notification {
+  _id: string;
+  title: string;
+  message: string;
+  type: string;
+  displayLocation: string[];
+  active: boolean;
+  startDate: string;
+  endDate?: string;
+  link?: string;
+  buttonText?: string;
+  backgroundColor?: string;
+  textColor?: string;
+  priority: number;
+}
+
 interface NotificationsManagementProps {
-  initialNotifications: any[];
+  initialNotifications: Notification[];
 }
 
 const NotificationsManagement = ({ initialNotifications }: NotificationsManagementProps) => {
-  const [notifications, setNotifications] = useState(initialNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedNotification, setSelectedNotification] = useState<any>(null);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
 
   const handleAddNew = () => {
     setSelectedNotification(null);
     setIsModalOpen(true);
   };
 
-  const handleEdit = (notification: any) => {
+  const handleEdit = (notification: Notification) => {
     setSelectedNotification(notification);
     setIsModalOpen(true);
   };
@@ -41,12 +57,12 @@ const NotificationsManagement = ({ initialNotifications }: NotificationsManageme
       } else {
         toast.error('Failed to delete notification');
       }
-    } catch (error) {
+    } catch {
       toast.error('Error deleting notification');
     }
   };
 
-  const handleToggleActive = async (notification: any) => {
+  const handleToggleActive = async (notification: Notification) => {
     try {
       const response = await fetch(`/api/notifications/${notification._id}`, {
         method: 'PUT',
@@ -63,12 +79,12 @@ const NotificationsManagement = ({ initialNotifications }: NotificationsManageme
       } else {
         toast.error('Failed to update notification');
       }
-    } catch (error) {
+    } catch {
       toast.error('Error updating notification');
     }
   };
 
-  const handleSave = (savedNotification: any) => {
+  const handleSave = (savedNotification: Notification) => {
     if (selectedNotification) {
       setNotifications(notifications.map(n => 
         n._id === savedNotification._id ? savedNotification : n

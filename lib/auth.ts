@@ -2,6 +2,17 @@ import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import dbConnect from './mongodb';
 import User from '@/models/User';
+import { Document, Types } from 'mongoose';
+
+// Define User document interface
+interface UserDocument extends Document {
+  _id: Types.ObjectId;
+  email: string;
+  name: string;
+  role: string;
+  password: string;
+  comparePassword(password: string): Promise<boolean>;
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -18,7 +29,7 @@ export const authOptions: NextAuthOptions = {
 
         await dbConnect();
 
-        const user = await User.findOne({ email: credentials.email }).select('+password');
+        const user = await User.findOne({ email: credentials.email }).select('+password') as UserDocument | null;
 
         if (!user) {
           throw new Error('Invalid email or password');
@@ -30,13 +41,11 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Invalid email or password');
         }
 
-        // Explicitly type user as any to access _id
-        const u = user as any;
         return {
-          id: u._id.toString(),
-          email: u.email,
-          name: u.name,
-          role: u.role,
+          id: user._id.toString(),
+          email: user.email,
+          name: user.name,
+          role: user.role,
         };
       },
     }),

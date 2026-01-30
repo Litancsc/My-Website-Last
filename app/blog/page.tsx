@@ -7,7 +7,30 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { formatDate } from '@/lib/utils';
 import { FaCalendar, FaUser, FaFolder, FaArrowRight } from 'react-icons/fa';
-import { getSiteUrl } from '@/lib/site';
+
+
+// TypeScript interfaces
+interface BlogPageProps {
+  searchParams: Promise<{
+    category?: string;
+    page?: string;
+  }>;
+}
+
+interface BlogPostData {
+  _id: string;
+  slug: string;
+  title: string;
+  excerpt?: string;
+  featuredImage?: string;
+  author?: string;
+  publishedAt?: Date;
+  createdAt: Date;
+  categories?: string[];
+  tags?: string[];
+  views?: number;
+  published: boolean;
+}
 
 // 🟢 added fallback-safe environment variables
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
@@ -31,13 +54,13 @@ export async function generateMetadata() {
   });
 }
 
-async function getBlogPosts(category?: string, page = 1, pageSize = 6) {
+async function getBlogPosts(category?: string, page = 1, pageSize = 6): Promise<{ posts: BlogPostData[]; total: number }> {
   try {
     await dbConnect();
-    const query: any = { published: true };
+    const query: Record<string, unknown> = { published: true };
     if (category) {
       // match when category is present in the categories array (case-insensitive)
-      const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
+      const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const re = new RegExp(`^${escapeRegExp(category)}$`, 'i');
       query.categories = { $in: [re] };
     }
@@ -57,21 +80,21 @@ async function getBlogPosts(category?: string, page = 1, pageSize = 6) {
   }
 }
 
-async function getAllCategories() {
+async function getAllCategories(): Promise<string[]> {
   try {
     await dbConnect();
     const cats = await BlogPost.distinct('categories', { published: true });
-    return (cats || []).map((c: any) => String(c));
+    return (cats || []).map((c: string) => String(c));
   } catch (error) {
     console.error('Error fetching categories:', error);
     return [];
   }
 }
 
-export default async function BlogPage(context: any) {
-  const searchParams = await context.searchParams;
-  const category = searchParams?.category as string | undefined;
-  const pageParam = parseInt(String(searchParams?.page ?? '1'), 10) || 1;
+export default async function BlogPage({ searchParams }: BlogPageProps) {
+  const resolvedParams = await searchParams;
+  const category = resolvedParams?.category;
+  const pageParam = parseInt(String(resolvedParams?.page ?? '1'), 10) || 1;
   const pageSize = 6; // change as needed
 
   // fetch posts filtered by category (if provided) with pagination
@@ -135,17 +158,17 @@ export default async function BlogPage(context: any) {
                   </div>
                 ) : (
                   <div className="space-y-8">
-                    {posts.map((post: any, idx: number) => ( // 🟢 added idx: number for type safety
+                    {posts.map((post: BlogPostData, idx: number) => (
                       <article
-                        key={post._id || idx} // 🟢 fallback in case _id missing
+                        key={post._id || idx}
                         className="bg-white rounded-xl shadow-lg overflow-hidden hover-lift"
                       >
                         <div className="grid md:grid-cols-3 gap-6">
                           {/* Featured Image */}
                           <div className="md:col-span-1 relative h-64 md:h-auto">
                             <Image
-                              src={post.featuredImage || '/images/default-blog.jpg'} // 🟢 fallback image added
-                              alt={post.title || 'Blog post'} // 🟢 fallback alt text added
+                              src={post.featuredImage || '/images/default-blog.jpg'}
+                              alt={post.title || 'Blog post'}
                               fill
                               className="object-cover"
                               sizes="(max-width: 768px) 100vw, 33vw"
@@ -162,7 +185,7 @@ export default async function BlogPage(context: any) {
                               </span>
                               <span className="flex items-center space-x-1">
                                 <FaUser className="text-gold" />
-                                <span>{post.author || 'Admin'}</span> {/* 🟢 fallback author */}
+                                <span>{post.author || 'Admin'}</span>
                               </span>
                             </div>
 
@@ -187,7 +210,7 @@ export default async function BlogPage(context: any) {
 
                             {/* Excerpt */}
                             <p className="text-gray-600 mb-4 line-clamp-3">
-                              {post.excerpt || 'Read more about this topic...'} {/* 🟢 fallback excerpt */}
+                              {post.excerpt || 'Read more about this topic...'}
                             </p>
 
                             {/* Read More */}
@@ -245,7 +268,7 @@ export default async function BlogPage(context: any) {
                   <div className="bg-gray-50 rounded-xl p-6 mb-6">
                     <h3 className="text-lg font-bold text-primary mb-4">Categories</h3>
                     <ul className="space-y-2">
-                      {uniqueCategories.map((category: any, index: number) => (
+                      {uniqueCategories.map((category: string, index: number) => (
                         <li key={index}>
                           <Link
                             href={`/blog?category=${encodeURIComponent(category)}`}
@@ -265,8 +288,8 @@ export default async function BlogPage(context: any) {
                   <div className="bg-gray-50 rounded-xl p-6">
                     <h3 className="text-lg font-bold text-primary mb-4">Recent Posts</h3>
                     <ul className="space-y-4">
-                      {posts.slice(0, 5).map((post: any, idx: number) => ( // 🟢 added idx
-                        <li key={post._id || idx}> {/* 🟢 fallback id */}
+                      {posts.slice(0, 5).map((post: BlogPostData, idx: number) => (
+                        <li key={post._id || idx}>
                           <Link href={`/blog/${post.slug}`} className="group">
                             <h4 className="font-semibold text-gray-800 group-hover:text-gold transition-colors line-clamp-2 mb-1">
                               {post.title}

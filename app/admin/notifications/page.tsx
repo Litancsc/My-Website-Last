@@ -1,10 +1,13 @@
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import AdminLayout from '@/components/admin/AdminLayout';
 import NotificationsManagement from '@/components/admin/NotificationsManagement';
 import dbConnect from '@/lib/mongodb';
 import Notification from '@/models/Notification';
+
+type SessionUserWithRole = {
+  role?: string;
+};
 
 async function getNotifications() {
   try {
@@ -12,7 +15,7 @@ async function getNotifications() {
     const notifications = await Notification.find()
       .sort({ priority: -1, createdAt: -1 })
       .lean();
-    
+
     return JSON.parse(JSON.stringify(notifications));
   } catch (error) {
     console.error('Error fetching notifications:', error);
@@ -22,8 +25,9 @@ async function getNotifications() {
 
 export default async function NotificationsPage() {
   const session = await getServerSession(authOptions);
-  
-  if (!session || session.user.role !== 'admin') {
+  const user = session?.user as SessionUserWithRole | undefined;
+
+  if (!user || user.role !== 'admin') {
     redirect('/admin/login');
   }
 

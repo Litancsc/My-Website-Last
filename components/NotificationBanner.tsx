@@ -1,16 +1,15 @@
 import dbConnect from '@/lib/mongodb';
 import Notification from '@/models/Notification';
 import Link from 'next/link';
-import { FaTimes } from 'react-icons/fa';
 
 async function getActiveNotifications() {
   try {
     await dbConnect();
     const now = new Date();
-    
+
     const notifications = await Notification.find({
       active: true,
-      displayLocation: 'banner',
+      displayLocation: { $in: ['banner'] }, // ✅ FIX
       startDate: { $lte: now },
       $or: [
         { endDate: { $exists: false } },
@@ -21,7 +20,7 @@ async function getActiveNotifications() {
       .sort({ priority: -1, createdAt: -1 })
       .limit(1)
       .lean();
-    
+
     return JSON.parse(JSON.stringify(notifications));
   } catch (error) {
     console.error('Error fetching notifications:', error);

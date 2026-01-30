@@ -8,11 +8,36 @@ import BlogPost from '@/models/BlogPost';
 import Image from 'next/image';
 import Link from 'next/link';
 import { formatDate } from '@/lib/utils';
-import { FaCalendar, FaUser, FaFolder, FaTag, FaArrowLeft } from 'react-icons/fa';
+import { FaCalendar, FaUser, FaFolder, FaTag } from 'react-icons/fa';
 import RelatedPostsClient from '@/components/blog/RelatedPostsClient';
 
+// TypeScript interfaces
+interface BlogPostParams {
+  params: Promise<{ slug: string }>;
+}
+
+interface BlogPostData {
+  _id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  content: string;
+  featuredImage: string;
+  author: string;
+  publishedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  categories?: string[];
+  tags?: string[];
+  views?: number;
+  published: boolean;
+  metaTitle?: string;
+  metaDescription?: string;
+  metaKeywords?: string;
+}
+
 // ✅ Fetch a single blog post
-async function getBlogPost(slug: string) {
+async function getBlogPost(slug: string): Promise<BlogPostData | null> {
   await dbConnect();
   const post = await BlogPost.findOne({ slug, published: true }).lean();
   if (!post) return null;
@@ -23,7 +48,7 @@ async function getBlogPost(slug: string) {
 }
 
 // ✅ Fetch related posts
-async function getRelatedPosts(currentPostId: string, categories: string[]) {
+async function getRelatedPosts(currentPostId: string, categories: string[]): Promise<BlogPostData[]> {
   await dbConnect();
   const posts = await BlogPost.find({
     _id: { $ne: currentPostId },
@@ -38,9 +63,9 @@ async function getRelatedPosts(currentPostId: string, categories: string[]) {
 }
 
 // ✅ Dynamic Metadata for SEO
-export async function generateMetadata({ params }: any) {
+export async function generateMetadata({ params }: BlogPostParams) {
   const awaitedParams = await params;
-  const { slug } = awaitedParams as { slug: string };
+  const { slug } = awaitedParams;
   const post = await getBlogPost(slug);
   const siteUrl = getSiteUrl();
 
@@ -58,7 +83,7 @@ export async function generateMetadata({ params }: any) {
   return genMeta({
     title: post.metaTitle || `${post.title} | Rupali Travel Agency`,
     description: post.metaDescription || post.excerpt,
-    keywords: post.metaKeywords,
+    keywords: post.metaKeywords ? [post.metaKeywords] : undefined,
     ogImage: post.featuredImage,
     ogType: 'article',
     canonical: `${siteUrl}/blog/${post.slug}`, // ✅ Valid canonical
@@ -66,9 +91,9 @@ export async function generateMetadata({ params }: any) {
 }
 
 // ✅ Blog Post Page
-export default async function BlogPostPage({ params }: any) {
+export default async function BlogPostPage({ params }: BlogPostParams) {
   const awaitedParams = await params;
-  const { slug } = awaitedParams as { slug: string };
+  const { slug } = awaitedParams;
   const post = await getBlogPost(slug);
   if (!post) notFound();
 
@@ -113,15 +138,7 @@ export default async function BlogPostPage({ params }: any) {
             sizes="100vw"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent" />
-          <div className="absolute top-8 left-8 z-10">
-            <Link
-              href="/blog"
-              className="inline-flex items-center space-x-2 bg-white px-4 py-2 rounded-lg text-primary hover:bg-gold hover:text-white transition-colors"
-            >
-              <FaArrowLeft />
-              <span>Back to Blog</span>
-            </Link>
-          </div>
+         
         </div>
 
         {/* ✅ Blog Post Content */}
@@ -247,4 +264,4 @@ export default async function BlogPostPage({ params }: any) {
       <Footer />
     </>
   );
-}
+};

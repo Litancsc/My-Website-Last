@@ -4,10 +4,26 @@ import { useState, useEffect } from 'react';
 import { FaTimes } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 
+interface Notification {
+  _id: string;
+  title: string;
+  message: string;
+  type: string;
+  displayLocation: string[];
+  active: boolean;
+  startDate: string;
+  endDate?: string;
+  link?: string;
+  buttonText?: string;
+  backgroundColor?: string;
+  textColor?: string;
+  priority: number;
+}
+
 interface NotificationModalProps {
-  notification: any | null;
+  notification: Notification | null;
   onClose: () => void;
-  onSave: (notification: any) => void;
+  onSave: (notification: Notification) => void;
 }
 
 const NotificationModal = ({ notification, onClose, onSave }: NotificationModalProps) => {
@@ -92,10 +108,10 @@ const NotificationModal = ({ notification, onClose, onSave }: NotificationModalP
         toast.success(notification ? 'Notification updated successfully' : 'Notification created successfully');
         onSave(savedNotification);
       } else {
-        const error = await response.json();
-        toast.error(error.error || 'Failed to save notification');
+        const errorData = await response.json();
+        toast.error(errorData.error || 'Failed to save notification');
       }
-    } catch (error) {
+    } catch {
       toast.error('Error saving notification');
     } finally {
       setIsSubmitting(false);

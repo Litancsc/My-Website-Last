@@ -3,9 +3,7 @@ import type { Metadata } from 'next';
 import { Poppins } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
-import { generateLocalBusinessSchema } from '@/lib/seo';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
+import { getSEOSettings, generateLocalBusinessSchema } from '@/lib/seo';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -14,80 +12,87 @@ const poppins = Poppins({
   display: 'swap',
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-const siteName = process.env.NEXT_PUBLIC_SITE_NAME || 'Rupali Travel Agency In Shillong';
-const siteDescription = 'Reliable car rental service in Shillong. Book affordable taxis, cabs, and luxury cars for airport transfers, sightseeing, and outstation trips. 24/7 service with professional drivers. Call 8415038275 for instant booking.';
+/* ✅ DYNAMIC METADATA (FROM DB) */
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getSEOSettings();
 
-export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
-  title: {
-    default: `${siteName} - Premium Car Rental Service`,
-    template: `%s | ${siteName}`,
-  },
-  description: siteDescription,
-  keywords: [
-    'car rental shillong ', 
-    'taxi service shillong ', 
-'cab booking shillong',
- 'car hire shillong',
- 'rent a car shillong',
-'luxury car rental shillong',
- 'affordable car rental shillong',
- 'airport taxi shillong',
- 'outstation cab shillong',
- 'shillong car rental service',
-'vehicle rental shillong', 
-'premium car hire shillong', 
-'local cab shillong',
- 'tourist taxi shillong' ,
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
-  ],
-  authors: [{ name: siteName }],
-  creator: siteName,
-  publisher: siteName,
-  manifest: '/site.webmanifest',
-  openGraph: {
-    type: 'website',
-    locale: 'en_US',
-    url: siteUrl,
-    siteName,
-    title: `${siteName} - Premium Car Rental Service`,
-    description: siteDescription,
-    images: [
-      {
-        url: `${siteUrl}/images/og-image.jpg`,
-        width: 1200,
-        height: 630,
-        alt: siteName,
-      },
-    ],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: `${siteName} - Premium Car Rental Service`,
-    description: siteDescription,
-    images: [`${siteUrl}/images/og-image.jpg`],
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
-  verification: { google: 'your-google-verification-code' },
-};
+  return {
+    metadataBase: new URL(siteUrl),
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const localBusinessSchema = generateLocalBusinessSchema();
+    title: {
+      default: settings.siteName,
+      template: `%s | ${settings.siteName}`,
+    },
+
+    description: settings.siteDescription,
+
+    keywords: settings.siteKeywords?.split(',').map(k => k.trim()),
+
+    verification: {
+      google: settings.googleSearchConsole || undefined,
+    },
+
+    openGraph: {
+      type: 'website',
+      url: siteUrl,
+      siteName: settings.siteName,
+      title: settings.siteName,
+      description: settings.siteDescription,
+      images: [
+        {
+          url:
+            settings.defaultOgImage ||
+            `${siteUrl}/images/og-image.jpg`,
+          width: 1200,
+          height: 630,
+          alt: settings.siteName,
+        },
+      ],
+    },
+
+    twitter: {
+      card: 'summary_large_image',
+      title: settings.siteName,
+      description: settings.siteDescription,
+      images: [
+        settings.defaultOgImage ||
+          `${siteUrl}/images/og-image.jpg`,
+      ],
+      site: settings.twitterHandle || undefined,
+    },
+
+    robots: {
+      index: true,
+      follow: true,
+    },
+  };
+}
+
+export default async function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const localBusinessSchema = await generateLocalBusinessSchema();
 
   return (
     <html lang="en" className={poppins.variable}>
       <head>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }}
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(localBusinessSchema),
+          }}
         />
       </head>
+
       <body className={`${poppins.className} antialiased`}>
+       
         <Providers>{children}</Providers>
+       
       </body>
     </html>
   );

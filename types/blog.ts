@@ -1,13 +1,27 @@
+// types/blog.ts
 export interface BlogPost {
-  _id: string;
+  _id?: string;
+
   title: string;
-  excerpt: string;
+  slug: string;
   content: string;
-  featuredImage?: string;
-  categories: string[];
+  excerpt: string;
+
+  featuredImage: string;
+
   author: string;
+  categories: string[];
+  tags: string[];
+
   published: boolean;
-  views: number;
-  createdAt?: string;
   publishedAt?: string;
+
+  metaTitle?: string;
+  metaDescription?: string;
+  metaKeywords?: string[];
+
+  views: number;
+
+  createdAt?: string;
+  updatedAt?: string;
 }

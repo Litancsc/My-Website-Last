@@ -45,10 +45,15 @@ export async function POST(request: NextRequest) {
 
     await dbConnect();
     const data = await request.json();
-    const car = await Car.create(data);
+
+    const car = await Car.create({
+      ...data,
+      carModel: data.model, // 🔥 FIX
+    });
 
     return NextResponse.json(car, { status: 201 });
-  } catch {
+  } catch (error) {
+    console.error('CREATE CAR ERROR:', error);
     return NextResponse.json(
       { error: 'Failed to create car' },
       { status: 500 }

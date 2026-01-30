@@ -9,6 +9,7 @@ const SEOSettings = () => {
   const [sitemapStatus, setSitemapStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [robotsStatus, setRobotsStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false); // FIXED: Added saving state
 
   const [settings, setSettings] = useState({
     siteName: '',
@@ -22,33 +23,41 @@ const SEOSettings = () => {
   });
 
   useEffect(() => {
-    // Load settings from API
-    async function fetchSettings() {
-      setLoading(true);
-      try {
-        const res = await fetch('/api/admin/seo-settings');
-        if (res.ok) {
-          const data = await res.json();
-          setSettings({
-            siteName: data.siteName || '',
-            siteDescription: data.siteDescription || '',
-            siteKeywords: data.siteKeywords || '',
-            googleAnalyticsId: data.googleAnalyticsId || '',
-            googleSearchConsole: data.googleSearchConsole || '',
-            facebookPixel: data.facebookPixel || '',
-            twitterHandle: data.twitterHandle || '',
-            defaultOgImage: data.defaultOgImage || '',
-          });
-        }
-      } catch (err) {
-        toast.error('Failed to load SEO settings');
-      }
-      setLoading(false);
-    }
     fetchSettings();
     checkSitemapStatus();
     checkRobotsStatus();
   }, []);
+
+  // FIXED: Improved fetch with better error handling
+  const fetchSettings = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/admin/seo-settings');
+      
+      if (!res.ok) {
+        throw new Error(`Failed to load settings: ${res.status}`);
+      }
+
+      const data = await res.json();
+      
+      // FIXED: Ensure all fields are properly set
+      setSettings({
+        siteName: data.siteName || '',
+        siteDescription: data.siteDescription || '',
+        siteKeywords: data.siteKeywords || '',
+        googleAnalyticsId: data.googleAnalyticsId || '',
+        googleSearchConsole: data.googleSearchConsole || '',
+        facebookPixel: data.facebookPixel || '',
+        twitterHandle: data.twitterHandle || '',
+        defaultOgImage: data.defaultOgImage || '',
+      });
+    } catch (err) {
+      console.error('Error loading SEO settings:', err);
+      toast.error('Failed to load SEO settings');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const checkSitemapStatus = async () => {
     try {
@@ -58,7 +67,7 @@ const SEOSettings = () => {
       } else {
         setSitemapStatus('error');
       }
-    } catch (error) {
+    } catch {
       setSitemapStatus('error');
     }
   };
@@ -71,25 +80,49 @@ const SEOSettings = () => {
       } else {
         setRobotsStatus('error');
       }
-    } catch (error) {
+    } catch {
       setRobotsStatus('error');
     }
   };
 
+  // FIXED: Improved save handler with proper error handling
   const handleSaveSettings = async () => {
+    setSaving(true);
+    
     try {
       const res = await fetch('/api/admin/seo-settings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(settings),
       });
-      if (res.ok) {
-        toast.success('SEO settings saved successfully!');
-      } else {
-        toast.error('Failed to save settings');
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: 'Failed to save' }));
+        throw new Error(errorData.message || 'Failed to save settings');
       }
-    } catch (error) {
-      toast.error('Failed to save settings');
+
+      const savedData = await res.json();
+      
+      // FIXED: Update state with saved data to ensure sync
+      setSettings({
+        siteName: savedData.siteName || '',
+        siteDescription: savedData.siteDescription || '',
+        siteKeywords: savedData.siteKeywords || '',
+        googleAnalyticsId: savedData.googleAnalyticsId || '',
+        googleSearchConsole: savedData.googleSearchConsole || '',
+        facebookPixel: savedData.facebookPixel || '',
+        twitterHandle: savedData.twitterHandle || '',
+        defaultOgImage: savedData.defaultOgImage || '',
+      });
+
+      toast.success('SEO settings saved successfully!');
+    } catch  {
+      const message = 'Failed to save settings';
+      toast(message);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -102,9 +135,17 @@ const SEOSettings = () => {
       } else {
         toast.error('Failed to generate sitemap');
       }
-    } catch (error) {
-      toast.error('Error generating sitemap');
+    } catch  {
+      toast('Error generating sitemap');
     }
+  };
+
+  // FIXED: Helper to update settings with proper typing
+  const updateSetting = (key: keyof typeof settings, value: string) => {
+    setSettings(prev => ({
+      ...prev,
+      [key]: value,
+    }));
   };
 
   const tabs = [
@@ -155,7 +196,7 @@ const SEOSettings = () => {
                     <input
                       type="text"
                       value={settings.siteName}
-                      onChange={(e) => setSettings({ ...settings, siteName: e.target.value })}
+                      onChange={(e) => updateSetting('siteName', e.target.value)}
                       className="input-field"
                       placeholder="DriveNow Rentals"
                     />
@@ -167,7 +208,7 @@ const SEOSettings = () => {
                     </label>
                     <textarea
                       value={settings.siteDescription}
-                      onChange={(e) => setSettings({ ...settings, siteDescription: e.target.value })}
+                      onChange={(e) => updateSetting('siteDescription', e.target.value)}
                       rows={3}
                       className="input-field"
                       placeholder="Brief description of your website"
@@ -181,7 +222,7 @@ const SEOSettings = () => {
                     <input
                       type="text"
                       value={settings.siteKeywords}
-                      onChange={(e) => setSettings({ ...settings, siteKeywords: e.target.value })}
+                      onChange={(e) => updateSetting('siteKeywords', e.target.value)}
                       className="input-field"
                       placeholder="car rental, luxury cars, affordable rental"
                     />
@@ -194,7 +235,7 @@ const SEOSettings = () => {
                     <input
                       type="text"
                       value={settings.defaultOgImage}
-                      onChange={(e) => setSettings({ ...settings, defaultOgImage: e.target.value })}
+                      onChange={(e) => updateSetting('defaultOgImage', e.target.value)}
                       className="input-field"
                       placeholder="/images/og-image.jpg"
                     />
@@ -210,14 +251,18 @@ const SEOSettings = () => {
                     <input
                       type="text"
                       value={settings.twitterHandle}
-                      onChange={(e) => setSettings({ ...settings, twitterHandle: e.target.value })}
+                      onChange={(e) => updateSetting('twitterHandle', e.target.value)}
                       className="input-field"
                       placeholder="@drivenowrentals"
                     />
                   </div>
 
-                  <button onClick={handleSaveSettings} className="btn-primary">
-                    Save General Settings
+                  <button 
+                    onClick={handleSaveSettings} 
+                    className="btn-primary"
+                    disabled={saving}
+                  >
+                    {saving ? 'Saving...' : 'Save General Settings'}
                   </button>
                 </div>
               )}
@@ -436,7 +481,7 @@ Sitemap: ${typeof window !== 'undefined' ? window.location.origin : ''}/api/site
                     <input
                       type="text"
                       value={settings.googleAnalyticsId}
-                      onChange={(e) => setSettings({ ...settings, googleAnalyticsId: e.target.value })}
+                      onChange={(e) => updateSetting('googleAnalyticsId', e.target.value)}
                       className="input-field"
                       placeholder="G-XXXXXXXXXX or UA-XXXXXXXXX-X"
                     />
@@ -452,7 +497,7 @@ Sitemap: ${typeof window !== 'undefined' ? window.location.origin : ''}/api/site
                     <input
                       type="text"
                       value={settings.googleSearchConsole}
-                      onChange={(e) => setSettings({ ...settings, googleSearchConsole: e.target.value })}
+                      onChange={(e) => updateSetting('googleSearchConsole', e.target.value)}
                       className="input-field"
                       placeholder="google-site-verification=..."
                     />
@@ -468,7 +513,7 @@ Sitemap: ${typeof window !== 'undefined' ? window.location.origin : ''}/api/site
                     <input
                       type="text"
                       value={settings.facebookPixel}
-                      onChange={(e) => setSettings({ ...settings, facebookPixel: e.target.value })}
+                      onChange={(e) => updateSetting('facebookPixel', e.target.value)}
                       className="input-field"
                       placeholder="1234567890123456"
                     />
@@ -477,8 +522,12 @@ Sitemap: ${typeof window !== 'undefined' ? window.location.origin : ''}/api/site
                     </p>
                   </div>
 
-                  <button onClick={handleSaveSettings} className="btn-primary">
-                    Save Analytics Settings
+                  <button 
+                    onClick={handleSaveSettings} 
+                    className="btn-primary"
+                    disabled={saving}
+                  >
+                    {saving ? 'Saving...' : 'Save Analytics Settings'}
                   </button>
 
                   <div className="bg-blue-50 rounded-lg p-6 mt-6">
@@ -567,5 +616,5 @@ Sitemap: ${typeof window !== 'undefined' ? window.location.origin : ''}/api/site
     </div>
   );
 };
+export default SEOSettings; 
 
-export default SEOSettings;

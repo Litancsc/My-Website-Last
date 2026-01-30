@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import Notification from '@/models/Notification';
 
+// GET - Fetch notifications
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();
@@ -40,5 +43,33 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-  
+}
+
+// POST - Create notification ✅ FIX
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session || session.user.role !== 'admin') {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    await dbConnect();
+
+    const data = await request.json();
+    const notification = await Notification.create(data);
+
+    return NextResponse.json(notification, { status: 201 });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Server error';
+
+    return NextResponse.json(
+      { error: message },
+      { status: 500 }
+    );
+  }
 }
